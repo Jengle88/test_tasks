@@ -60,15 +60,15 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import ru.jengle88.deliveryapp.R
 import ru.jengle88.deliveryapp.ui.screen.common_component.shimmerEffect
-import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.FoodItem
-import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.PromoImageItem
+import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.MealItem
+import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.PromoMealImageItem
 
 @Composable
 fun MainFragmentUi(viewModel: MainFragmentViewModel) {
-    val selectedFilterIndex by viewModel.selectedFilterState.collectAsStateWithLifecycle()
-    val filtersForFoodTitles = viewModel.filtersForFood
-    val foodItems by viewModel.visibleFoodItemsState.collectAsStateWithLifecycle()
-    val promoFoodItems by viewModel.promoFoodItemsState.collectAsStateWithLifecycle()
+    val selectedFilterIndex by viewModel.selectedCategoryState.collectAsStateWithLifecycle()
+    val mealsCategories by viewModel.mealsCategoriesState.collectAsStateWithLifecycle()
+    val meals by viewModel.visibleMealsState.collectAsStateWithLifecycle()
+    val promoMealItems by viewModel.promoMealItemsState.collectAsStateWithLifecycle()
 
     val citiesList = viewModel.citiesList
     val currentCity by viewModel.currentCityState.collectAsStateWithLifecycle()
@@ -77,9 +77,9 @@ fun MainFragmentUi(viewModel: MainFragmentViewModel) {
         currentCity,
         citiesList,
         selectedFilterIndex,
-        filtersForFoodTitles,
-        foodItems,
-        promoFoodItems,
+        mealsCategories,
+        meals,
+        promoMealItems,
         viewModel::onCurrentCityChanged,
         viewModel::onSelectedFilterChanged,
     )
@@ -91,9 +91,9 @@ fun FoodListUi(
     currentCity: String,
     citiesList: ImmutableList<String>,
     selectedFilterIndex: Int,
-    filtersForFoodTitles: ImmutableList<String>,
-    foodItems: ImmutableList<FoodItem>,
-    promoFoodItems: ImmutableList<PromoImageItem>,
+    mealsCategories: ImmutableList<String>,
+    meals: ImmutableList<MealItem>,
+    promoMealItems: ImmutableList<PromoMealImageItem>,
     onCurrentCityChanged: (Int) -> Unit,
     onSelectedFilterChanged: (Int) -> Unit
 ) {
@@ -119,19 +119,20 @@ fun FoodListUi(
                 Spacer(modifier = Modifier.height(16.dp))
             }
             item {
-                PromoFoodRowList(promoFoodItems)
+                PromoFoodRowList(promoMealItems)
             }
             stickyHeader("FilterRowList") {
+                // TODO: У фона фильтров другой цвет, отличный от обычного заднего фона 
                 FilterRowList(
                     selectedFilterIndex,
                     isShadowForFoodFilterVisible,
-                    filtersForFoodTitles,
+                    mealsCategories,
                     onSelectedFilterChanged
                 )
             }
-            items(foodItems) { foodItem ->
+            items(meals) { mealItem ->
                 Divider(thickness = 1.dp, color = Color(0xFFF3F5F9))
-                FoodListItem(foodItem)
+                MealListItem(mealItem)
             }
         }
     }
@@ -196,14 +197,14 @@ fun FoodTopBar(
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun FoodListItem(
-    foodItem: FoodItem
+fun MealListItem(
+    mealItem: MealItem
 ) {
     Row(
         modifier = Modifier.padding(16.dp)
     ) {
         GlideSubcomposition(
-            model = foodItem.imageUrl,
+            model = mealItem.imageUrl,
             modifier = Modifier
                 .padding(end = 22.dp)
                 .size(135.dp),
@@ -228,7 +229,7 @@ fun FoodListItem(
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = foodItem.title,
+                text = mealItem.title,
                 style = TextStyle(
                     fontSize = 16.sp,
                     fontWeight = FontWeight(700),
@@ -237,7 +238,7 @@ fun FoodListItem(
             )
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = foodItem.ingredients,
+                text = mealItem.ingredients,
                 style = TextStyle(
                     fontSize = 14.sp,
                     fontWeight = FontWeight(400),
@@ -254,7 +255,7 @@ fun FoodListItem(
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = "от ${foodItem.price} р",
+                        text = "от ${mealItem.price} р",
                         style = TextStyle(
                             fontSize = 13.sp,
                             fontWeight = FontWeight(400),
@@ -364,8 +365,8 @@ fun UnselectedFilterItem(
 
 @Composable
 @OptIn(ExperimentalGlideComposeApi::class)
-private fun PromoFoodRowList(promoFoodItems: ImmutableList<PromoImageItem>) {
-    if (promoFoodItems.isEmpty()) {
+private fun PromoFoodRowList(promoMealItems: ImmutableList<PromoMealImageItem>) {
+    if (promoMealItems.isEmpty()) {
         return
     }
     LazyRow(
@@ -375,7 +376,7 @@ private fun PromoFoodRowList(promoFoodItems: ImmutableList<PromoImageItem>) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        items(promoFoodItems) { promoFoodItem ->
+        items(promoMealItems) { promoFoodItem ->
             GlideSubcomposition(
                 model = promoFoodItem.imageUrl,
                 modifier = Modifier
@@ -426,19 +427,32 @@ fun PreviewFoodListUi() {
         currentCity = "Москва",
         citiesList = persistentListOf("Москва", "Санкт-Петербург", "Казань", "Воронеж", "Орёл"),
         selectedFilterIndex = 0,
-        filtersForFoodTitles = listOf(
+        mealsCategories = listOf(
             "Всё",
             "Пицца",
             "Комбо",
             "Десерты",
             "Напитки"
         ).toPersistentList(),
-        foodItems = buildList { repeat(20) { i -> add(FoodItem("Пицца #$i")) } }.toPersistentList(),
-        promoFoodItems = persistentListOf(
-            PromoImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
-            PromoImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
-            PromoImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
-            PromoImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
+        meals = buildList {
+            repeat(20) { i ->
+                add(
+                    MealItem(
+                        id = "$i",
+                        title = "Пицца #$i",
+                        category = "All",
+                        ingredients = "Ingredient #$i",
+                        price = 345,
+                        imageUrl = "https://drive.google.com/uc?export=download&id=1FUQ6QG96hNu_TAlkXXNA-b3n4lxM5Ohd"
+                    )
+                )
+            }
+        }.toPersistentList(),
+        promoMealItems = persistentListOf(
+            PromoMealImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
         ),
         onSelectedFilterChanged = {},
         onCurrentCityChanged = {}
