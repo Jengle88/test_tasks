@@ -2,37 +2,47 @@ package ru.jengle88.deliveryapp.ui.screen.main_screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.FoodItem
-import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.PromoImageItem
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import ru.jengle88.deliveryapp.common.ApiResult
+import ru.jengle88.deliveryapp.domain.use_case.GetCategoriesUseCase
+import ru.jengle88.deliveryapp.domain.use_case.GetMealsUseCase
+import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.MealItem
+import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.PromoMealImageItem
 import javax.inject.Inject
 
-class MainFragmentViewModel : ViewModel() {
+class MainFragmentViewModel(
+    private val getMealsUseCase: GetMealsUseCase,
+    private val getCategoriesUseCase: GetCategoriesUseCase,
+) : ViewModel() {
 
     // TODO: Заменить на получение извне
-    val filtersForFood = persistentListOf("Всё", "Пицца", "Комбо", "Десерты", "Напитки")
-    private val foodItems = buildList { repeat(20) { i -> add(FoodItem("Пицца #$i")) } }
-        .toPersistentList()
+    private var mealItems = persistentListOf<MealItem>()
 
-    private val selectedFilterMutableState = MutableStateFlow(0)
-    val selectedFilterState = selectedFilterMutableState.asStateFlow()
+    private val mealsCategoriesMutableState = MutableStateFlow(persistentListOf("All"))
+    val mealsCategoriesState = mealsCategoriesMutableState.asStateFlow()
 
-    private val promoFoodItemsMutableState = MutableStateFlow(
+    private val selectedCategoryMutableState = MutableStateFlow(0)
+    val selectedCategoryState = selectedCategoryMutableState.asStateFlow()
+
+    private val promoMealItemsMutableState = MutableStateFlow(
         persistentListOf(
-            PromoImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
-            PromoImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
-            PromoImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
-            PromoImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
+            PromoMealImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
         )
     )
-    val promoFoodItemsState = promoFoodItemsMutableState.asStateFlow()
+    val promoMealItemsState = promoMealItemsMutableState.asStateFlow()
 
-    private val visibleFoodItemsMutableState = MutableStateFlow(persistentListOf<FoodItem>())
-    val visibleFoodItemsState = visibleFoodItemsMutableState.asStateFlow()
+    private val visibleMealItemsMutableState = MutableStateFlow(persistentListOf<MealItem>())
+    val visibleMealsState = visibleMealItemsMutableState.asStateFlow()
 
     val citiesList = persistentListOf("Москва", "Санкт-Петербург", "Казань", "Воронеж", "Орёл")
 
@@ -40,13 +50,52 @@ class MainFragmentViewModel : ViewModel() {
     val currentCityState = currentCityMutableState.asStateFlow()
 
     init {
-        onVisibleFoodChanged()
+        uploadCategories()
+        uploadMeals()
+    }
+
+    private fun uploadCategories() {
+        getCategoriesUseCase.invoke()
+            .onEach { apiResult ->
+                when (apiResult) {
+                    is ApiResult.Loading -> {
+                        // TODO Добавить плейсхолдер
+                    }
+                    is ApiResult.Success -> {
+                        val result = buildList {
+                            add("All")
+                            addAll(apiResult.result ?: emptyList())
+                        }.toPersistentList()
+                        mealsCategoriesMutableState.value = result
+                        selectedCategoryMutableState.value = 0
+                    }
+                    is ApiResult.Failure -> {}
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun uploadMeals() {
+        getMealsUseCase.invoke(20)
+            .onEach { apiResult ->
+                when (apiResult) {
+                    is ApiResult.Loading -> {
+                        // TODO Добавить плейсхолдер
+                    }
+                    is ApiResult.Success -> {
+                        mealItems = (apiResult.result ?: emptyList()).toPersistentList()
+                        onVisibleMealsChanged()
+                    }
+                    is ApiResult.Failure -> {}
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onSelectedFilterChanged(newIndex: Int) {
-        if (newIndex !in filtersForFood.indices) return
-        selectedFilterMutableState.value = newIndex
-        onVisibleFoodChanged()
+        if (newIndex !in mealsCategoriesMutableState.value.indices) return
+        selectedCategoryMutableState.value = newIndex
+        onVisibleMealsChanged()
     }
 
     fun onCurrentCityChanged(newIndex: Int) {
@@ -54,24 +103,29 @@ class MainFragmentViewModel : ViewModel() {
         currentCityMutableState.value = citiesList[newIndex]
     }
 
-    private fun onVisibleFoodChanged() {
-        val selectedFilter = selectedFilterState.value
+    private fun onVisibleMealsChanged() {
+        val selectedFilter = selectedCategoryState.value
         if (selectedFilter == 0) {
-            visibleFoodItemsMutableState.value = foodItems
+            visibleMealItemsMutableState.value = mealItems
         } else {
-            val result = mutableListOf<FoodItem>()
-            for (i in selectedFilter until foodItems.size step filtersForFood.size) {
-                result.add(foodItems[i])
-            }
-            visibleFoodItemsMutableState.value = result.toPersistentList()
+            val currentMeals = mealItems.toList()
+            val selectedCategory = mealsCategoriesState.value[selectedFilter]
+            val result = currentMeals.filter { it.category == selectedCategory }
+
+            visibleMealItemsMutableState.value = result.toPersistentList()
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     class Factory @Inject constructor(
+        private val getMealsUseCase: GetMealsUseCase,
+        private val getCategoriesUseCase: GetCategoriesUseCase,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            return (MainFragmentViewModel() as T)
+            return (MainFragmentViewModel(
+                getMealsUseCase,
+                getCategoriesUseCase
+            ) as T)
         }
     }
 }

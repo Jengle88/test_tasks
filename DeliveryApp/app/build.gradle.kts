@@ -76,8 +76,6 @@ dependencies {
     implementation(libs.androidx.lifecycleViewModel)
     implementation(libs.androidx.lifecycleViewModelCompose)
     implementation(libs.androidx.lifecycleViewModelSavedState)
-    annotationProcessor(libs.androidx.roomCompiler)
-    implementation(libs.androidx.roomRuntime)
 
     kapt(libs.google.daggerCompiler)
     implementation(libs.google.daggerRuntime)
@@ -86,9 +84,13 @@ dependencies {
     implementation(libs.kotlin.immutableCollections)
 
     debugImplementation(libs.square.leakCanary)
-    implementation(libs.square.okHttp)
 
     implementation(libs.glide.compose)
+
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.coroutines.adapter)
+    implementation(libs.gson)
+    implementation(libs.gson.converter)
 
     testImplementation(libs.test.junit4)
     androidTestImplementation(libs.test.androidx.extJunit)

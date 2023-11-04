@@ -7,7 +7,7 @@ import ru.jengle88.deliveryapp.ui.screen.main_screen.MainFragment
 import javax.inject.Singleton
 
 @Singleton
-@Component(modules = []/*[AppModule::class, UseCaseModule::class]*/)
+@Component(modules = [AppModule::class, RepositoryModule::class, UseCaseModule::class])
 interface ApplicationComponent {
 
     fun inject(mainFragment: MainFragment)
