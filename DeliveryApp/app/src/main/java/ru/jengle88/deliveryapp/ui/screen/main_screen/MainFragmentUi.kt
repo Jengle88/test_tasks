@@ -19,18 +19,33 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,6 +58,7 @@ import com.bumptech.glide.integration.compose.RequestState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
+import ru.jengle88.deliveryapp.R
 import ru.jengle88.deliveryapp.ui.screen.common_component.shimmerEffect
 import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.FoodItem
 import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.PromoImageItem
@@ -54,39 +70,128 @@ fun MainFragmentUi(viewModel: MainFragmentViewModel) {
     val foodItems by viewModel.visibleFoodItemsState.collectAsStateWithLifecycle()
     val promoFoodItems by viewModel.promoFoodItemsState.collectAsStateWithLifecycle()
 
+    val citiesList = viewModel.citiesList
+    val currentCity by viewModel.currentCityState.collectAsStateWithLifecycle()
+
     FoodListUi(
+        currentCity,
+        citiesList,
         selectedFilterIndex,
         filtersForFoodTitles,
         foodItems,
         promoFoodItems,
-        viewModel::onSelectedFilterChanged
+        viewModel::onCurrentCityChanged,
+        viewModel::onSelectedFilterChanged,
     )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FoodListUi(
+    currentCity: String,
+    citiesList: ImmutableList<String>,
     selectedFilterIndex: Int,
     filtersForFoodTitles: ImmutableList<String>,
     foodItems: ImmutableList<FoodItem>,
     promoFoodItems: ImmutableList<PromoImageItem>,
+    onCurrentCityChanged: (Int) -> Unit,
     onSelectedFilterChanged: (Int) -> Unit
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
+    Scaffold(
+        topBar = {
+            FoodTopBar(citiesList, currentCity, onCurrentCityChanged)
         }
-        item {
-            PromoFoodRowList(promoFoodItems)
+    ) { paddingValues ->
+        val lazyListState = rememberLazyListState()
+        val isShadowForFoodFilterVisible by remember {
+            derivedStateOf {
+                lazyListState.layoutInfo.visibleItemsInfo.firstOrNull()?.key == "FilterRowList"
+            }
         }
-        stickyHeader {
-            FilterRowList(selectedFilterIndex, filtersForFoodTitles, onSelectedFilterChanged)
-        }
-        items(foodItems) { foodItem ->
-            Divider(thickness = 1.dp, color = Color(0xFFF3F5F9))
-            FoodListItem(foodItem)
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            state = lazyListState
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            item {
+                PromoFoodRowList(promoFoodItems)
+            }
+            stickyHeader("FilterRowList") {
+                FilterRowList(
+                    selectedFilterIndex,
+                    isShadowForFoodFilterVisible,
+                    filtersForFoodTitles,
+                    onSelectedFilterChanged
+                )
+            }
+            items(foodItems) { foodItem ->
+                Divider(thickness = 1.dp, color = Color(0xFFF3F5F9))
+                FoodListItem(foodItem)
+            }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FoodTopBar(
+    citiesList: ImmutableList<String>,
+    currentCity: String,
+    onCurrentCityChanged: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    TopAppBar(
+        title = {
+            Column {
+                Row(
+                    modifier = Modifier.clickable { expanded = true },
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = currentCity,
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight(500),
+                            color = Color(0xFF222831),
+                        )
+                    )
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    citiesList.forEachIndexed { index, city ->
+                        DropdownMenuItem(
+                            text = { Text(city) },
+                            onClick = {
+                                onCurrentCityChanged(index)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = {}
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_qr_code),
+                    contentDescription = null,
+                    contentScale = ContentScale.None
+                )
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
@@ -165,6 +270,7 @@ fun FoodListItem(
 @Composable
 fun FilterRowList(
     selectedFilterIndex: Int,
+    isShadowForFoodFilterVisible: Boolean,
     filtersForFoodTitles: ImmutableList<String>,
     onSelectedFilterChanged: (Int) -> Unit
 ) {
@@ -172,11 +278,19 @@ fun FilterRowList(
         return
     }
 
+    val modifier = if (isShadowForFoodFilterVisible) {
+        Modifier.shadow(
+            elevation = 10.dp,
+        )
+    } else {
+        Modifier
+    }
+
     LazyRow(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(Color(0xFFFFFFFF))
-            .padding(top = 24.dp, bottom = 16.dp)
+            .padding(vertical = 16.dp)
             .height(32.dp),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -258,7 +372,7 @@ private fun PromoFoodRowList(promoFoodItems: ImmutableList<PromoImageItem>) {
         modifier = Modifier
             .fillMaxWidth()
             .height(112.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         items(promoFoodItems) { promoFoodItem ->
@@ -309,8 +423,16 @@ private fun ProgressIndicator(modifier: Modifier) {
 @Composable
 fun PreviewFoodListUi() {
     FoodListUi(
+        currentCity = "Москва",
+        citiesList = persistentListOf("Москва", "Санкт-Петербург", "Казань", "Воронеж", "Орёл"),
         selectedFilterIndex = 0,
-        filtersForFoodTitles = listOf("Всё", "Пицца", "Комбо", "Десерты", "Напитки").toPersistentList(),
+        filtersForFoodTitles = listOf(
+            "Всё",
+            "Пицца",
+            "Комбо",
+            "Десерты",
+            "Напитки"
+        ).toPersistentList(),
         foodItems = buildList { repeat(20) { i -> add(FoodItem("Пицца #$i")) } }.toPersistentList(),
         promoFoodItems = persistentListOf(
             PromoImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
@@ -318,6 +440,7 @@ fun PreviewFoodListUi() {
             PromoImageItem("https://drive.google.com/uc?id=1JTawuyeHCPL8FgH6OzZt4suwUjJpSxoP"),
             PromoImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
         ),
-        onSelectedFilterChanged = {}
+        onSelectedFilterChanged = {},
+        onCurrentCityChanged = {}
     )
 }

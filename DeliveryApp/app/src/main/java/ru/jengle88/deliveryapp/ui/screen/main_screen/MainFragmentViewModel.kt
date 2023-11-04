@@ -31,9 +31,13 @@ class MainFragmentViewModel : ViewModel() {
     )
     val promoFoodItemsState = promoFoodItemsMutableState.asStateFlow()
 
-
     private val visibleFoodItemsMutableState = MutableStateFlow(persistentListOf<FoodItem>())
     val visibleFoodItemsState = visibleFoodItemsMutableState.asStateFlow()
+
+    val citiesList = persistentListOf("Москва", "Санкт-Петербург", "Казань", "Воронеж", "Орёл")
+
+    private val currentCityMutableState = MutableStateFlow("Москва")
+    val currentCityState = currentCityMutableState.asStateFlow()
 
     init {
         onVisibleFoodChanged()
@@ -43,6 +47,11 @@ class MainFragmentViewModel : ViewModel() {
         if (newIndex !in filtersForFood.indices) return
         selectedFilterMutableState.value = newIndex
         onVisibleFoodChanged()
+    }
+
+    fun onCurrentCityChanged(newIndex: Int) {
+        if (newIndex !in citiesList.indices) return
+        currentCityMutableState.value = citiesList[newIndex]
     }
 
     private fun onVisibleFoodChanged() {
