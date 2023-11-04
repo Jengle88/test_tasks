@@ -88,6 +88,8 @@ dependencies {
     debugImplementation(libs.square.leakCanary)
     implementation(libs.square.okHttp)
 
+    implementation(libs.glide.compose)
+
     testImplementation(libs.test.junit4)
     androidTestImplementation(libs.test.androidx.extJunit)
     androidTestImplementation(libs.test.androidx.espresso.core)

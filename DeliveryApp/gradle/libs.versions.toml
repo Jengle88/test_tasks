@@ -35,6 +35,8 @@ testLibs-androidx-extJunit = "1.1.5"
 legacy-support-v4 = "1.0.0"
 lifecycle-livedata-ktx = "2.6.2"
 
+glide-compose = "1.0.0-beta01"
+
 [libraries]
 
 androidx-activity = { module = "androidx.activity:activity-ktx", version.ref = "androidx-activity" }
@@ -84,6 +86,7 @@ test-androidx-espresso-core = { module = "androidx.test.espresso:espresso-core",
 legacy-support-v4 = { group = "androidx.legacy", name = "legacy-support-v4", version.ref = "legacy-support-v4" }
 lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle-livedata-ktx" }
 
+glide-compose = {module = "com.github.bumptech.glide:compose", version.ref = "glide-compose"}
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "gradlePlugins-agp" }
