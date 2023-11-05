@@ -16,12 +16,16 @@ class GetMealsUseCase(
         val result = mutableSetOf<MealItem>()
         val mapper = FoodMapper()
 
-        while (result.size < amount) {
-            val newMeal = mealsRepository.getRandomMeals()
-            if (newMeal.meals.isNotEmpty())
-                result.add(mapper.toMealItem(newMeal.meals.first()))
+        try {
+            while (result.size < amount) {
+                val newMeal = mealsRepository.getRandomMeals()
+                if (newMeal.meals.isNotEmpty())
+                    result.add(mapper.toMealItem(newMeal.meals.first()))
+            }
+            emit(ApiResult.Success(result.toList()))
         }
-
-        emit(ApiResult.Success(result.toList()))
+        catch (e: Exception) {
+            emit(ApiResult.Failure(e.message))
+        }
     }
 }

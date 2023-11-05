@@ -22,7 +22,6 @@ class MainFragmentViewModel(
     private val getCategoriesUseCase: GetCategoriesUseCase,
 ) : ViewModel() {
 
-    // TODO: Заменить на получение извне
     private var mealItems = persistentListOf<MealItem>()
 
     private val mealsCategoriesMutableState = MutableStateFlow(persistentListOf("All"))
@@ -43,6 +42,8 @@ class MainFragmentViewModel(
 
     private val visibleMealItemsMutableState = MutableStateFlow(persistentListOf<MealItem>())
     val visibleMealsState = visibleMealItemsMutableState.asStateFlow()
+    private val mealsLoadingMutableState = MutableStateFlow(LoadingState.NONE)
+    val mealsLoadingState = mealsLoadingMutableState.asStateFlow()
 
     val citiesList = persistentListOf("Москва", "Санкт-Петербург", "Казань", "Воронеж", "Орёл")
 
@@ -58,9 +59,7 @@ class MainFragmentViewModel(
         getCategoriesUseCase.invoke()
             .onEach { apiResult ->
                 when (apiResult) {
-                    is ApiResult.Loading -> {
-                        // TODO Добавить плейсхолдер
-                    }
+                    is ApiResult.Loading -> {}
                     is ApiResult.Success -> {
                         val result = buildList {
                             add("All")
@@ -75,18 +74,26 @@ class MainFragmentViewModel(
             .launchIn(viewModelScope)
     }
 
+    fun onReloadClick() {
+        uploadCategories()
+        uploadMeals()
+    }
+
     private fun uploadMeals() {
         getMealsUseCase.invoke(20)
             .onEach { apiResult ->
                 when (apiResult) {
                     is ApiResult.Loading -> {
-                        // TODO Добавить плейсхолдер
+                        mealsLoadingMutableState.value = LoadingState.LOADING
                     }
                     is ApiResult.Success -> {
                         mealItems = (apiResult.result ?: emptyList()).toPersistentList()
+                        mealsLoadingMutableState.value = LoadingState.SUCCESS
                         onVisibleMealsChanged()
                     }
-                    is ApiResult.Failure -> {}
+                    is ApiResult.Failure -> {
+                        mealsLoadingMutableState.value = LoadingState.FAILURE
+                    }
                 }
             }
             .launchIn(viewModelScope)
