@@ -83,7 +83,7 @@ dependencies {
     implementation(libs.kotlin.coroutines)
     implementation(libs.kotlin.immutableCollections)
 
-    debugImplementation(libs.square.leakCanary)
+    //debugImplementation(libs.square.leakCanary)
 
     implementation(libs.glide.compose)
 
