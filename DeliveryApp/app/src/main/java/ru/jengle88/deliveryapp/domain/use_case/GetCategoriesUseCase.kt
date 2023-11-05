@@ -11,6 +11,11 @@ class GetCategoriesUseCase(
     operator fun invoke(): Flow<ApiResult<List<String>>> = flow {
         emit(ApiResult.Loading())
 
-        emit(ApiResult.Success(mealsRepository.getCategories().categories.map { it.strCategory }))
+        try {
+            val categories = mealsRepository.getCategories().categories.map { it.strCategory }
+            emit(ApiResult.Success(categories))
+        } catch (e: Exception) {
+            emit(ApiResult.Failure(e.message))
+        }
     }
 }

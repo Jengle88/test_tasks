@@ -5,13 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.viewModels
 import ru.jengle88.deliveryapp.R
 import ru.jengle88.deliveryapp.app.DeliveryApp
 import ru.jengle88.deliveryapp.ui.screen.BaseFragmentWithComposeView
 import ru.jengle88.deliveryapp.ui.theme.DeliveryAppTheme
+import ru.jengle88.deliveryapp.ui.theme.colorCommonBackground
 import javax.inject.Inject
 
 class MainFragment : BaseFragmentWithComposeView(
@@ -26,6 +26,7 @@ class MainFragment : BaseFragmentWithComposeView(
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
+
         (context.applicationContext as DeliveryApp).appComponent
             .inject(this)
     }
@@ -36,7 +37,7 @@ class MainFragment : BaseFragmentWithComposeView(
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFFBFBFB)),
+                        .background(colorCommonBackground),
                 ) {
                     MainFragmentUi(viewModel)
                 }

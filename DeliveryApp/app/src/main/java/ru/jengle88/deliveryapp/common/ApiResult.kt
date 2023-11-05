@@ -6,5 +6,4 @@ sealed class ApiResult<T>(val result: T? = null, val message: String? = null) {
     class Success<T>(result: T?): ApiResult<T>(result = result)
 
     class Failure<T>(message: String?): ApiResult<T>(message = message)
-
 }

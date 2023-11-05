@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -43,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -62,12 +62,22 @@ import ru.jengle88.deliveryapp.R
 import ru.jengle88.deliveryapp.ui.screen.common_component.shimmerEffect
 import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.MealItem
 import ru.jengle88.deliveryapp.ui.screen.main_screen.view_object.PromoMealImageItem
+import ru.jengle88.deliveryapp.ui.theme.colorAccentBackground
+import ru.jengle88.deliveryapp.ui.theme.colorAccentPrimary
+import ru.jengle88.deliveryapp.ui.theme.colorCommonBackground
+import ru.jengle88.deliveryapp.ui.theme.colorDivider
+import ru.jengle88.deliveryapp.ui.theme.colorInactiveFilterBackground
+import ru.jengle88.deliveryapp.ui.theme.colorInactiveFilterText
+import ru.jengle88.deliveryapp.ui.theme.colorPrimaryText
+import ru.jengle88.deliveryapp.ui.theme.colorSecondaryText
+import ru.jengle88.deliveryapp.ui.theme.colorShadow
 
 @Composable
 fun MainFragmentUi(viewModel: MainFragmentViewModel) {
     val selectedFilterIndex by viewModel.selectedCategoryState.collectAsStateWithLifecycle()
     val mealsCategories by viewModel.mealsCategoriesState.collectAsStateWithLifecycle()
     val meals by viewModel.visibleMealsState.collectAsStateWithLifecycle()
+    val mealsLoadingState by viewModel.mealsLoadingState.collectAsStateWithLifecycle()
     val promoMealItems by viewModel.promoMealItemsState.collectAsStateWithLifecycle()
 
     val citiesList = viewModel.citiesList
@@ -78,10 +88,12 @@ fun MainFragmentUi(viewModel: MainFragmentViewModel) {
         citiesList,
         selectedFilterIndex,
         mealsCategories,
+        mealsLoadingState,
         meals,
         promoMealItems,
         viewModel::onCurrentCityChanged,
         viewModel::onSelectedFilterChanged,
+        viewModel::onReloadClick
     )
 }
 
@@ -92,10 +104,12 @@ fun FoodListUi(
     citiesList: ImmutableList<String>,
     selectedFilterIndex: Int,
     mealsCategories: ImmutableList<String>,
+    mealsLoadingState: LoadingState,
     meals: ImmutableList<MealItem>,
     promoMealItems: ImmutableList<PromoMealImageItem>,
     onCurrentCityChanged: (Int) -> Unit,
-    onSelectedFilterChanged: (Int) -> Unit
+    onSelectedFilterChanged: (Int) -> Unit,
+    onReloadMealsClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -122,7 +136,6 @@ fun FoodListUi(
                 PromoFoodRowList(promoMealItems)
             }
             stickyHeader("FilterRowList") {
-                // TODO: У фона фильтров другой цвет, отличный от обычного заднего фона 
                 FilterRowList(
                     selectedFilterIndex,
                     isShadowForFoodFilterVisible,
@@ -130,9 +143,42 @@ fun FoodListUi(
                     onSelectedFilterChanged
                 )
             }
-            items(meals) { mealItem ->
-                Divider(thickness = 1.dp, color = Color(0xFFF3F5F9))
-                MealListItem(mealItem)
+            when (mealsLoadingState) {
+                LoadingState.LOADING -> {
+                    items(5) {
+                        Divider(thickness = 1.dp, color = colorDivider)
+                        FakeMealListItem()
+                    }
+                }
+
+                LoadingState.SUCCESS -> {
+                    items(meals) { mealItem ->
+                        Divider(thickness = 1.dp, color = colorDivider)
+                        MealListItem(mealItem)
+                    }
+                }
+
+                LoadingState.FAILURE -> {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(
+                                modifier = Modifier.size(48.dp),
+                                onClick = onReloadMealsClick
+                            ) {
+                                Icon(
+                                    modifier = Modifier.size(48.dp),
+                                    imageVector = Icons.Filled.Refresh,
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                    }
+                }
+
+                LoadingState.NONE -> {}
             }
         }
     }
@@ -160,7 +206,7 @@ fun FoodTopBar(
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight(500),
-                            color = Color(0xFF222831),
+                            color = colorPrimaryText,
                         )
                     )
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
@@ -233,7 +279,7 @@ fun MealListItem(
                 style = TextStyle(
                     fontSize = 16.sp,
                     fontWeight = FontWeight(700),
-                    color = Color(0xFF222831),
+                    color = colorPrimaryText,
                 ),
             )
             Text(
@@ -242,7 +288,7 @@ fun MealListItem(
                 style = TextStyle(
                     fontSize = 14.sp,
                     fontWeight = FontWeight(400),
-                    color = Color(0xFFAAAAAD),
+                    color = colorSecondaryText,
                 ),
             )
             Box(
@@ -250,8 +296,8 @@ fun MealListItem(
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 OutlinedButton(
-                    border = BorderStroke(1.dp, Color(0xFFFD3A69)),
-                    onClick = { /*TODO сделать какую-нибудь активность*/ },
+                    border = BorderStroke(1.dp, colorAccentPrimary),
+                    onClick = {},
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
@@ -259,11 +305,49 @@ fun MealListItem(
                         style = TextStyle(
                             fontSize = 13.sp,
                             fontWeight = FontWeight(400),
-                            color = Color(0xFFFD3A69),
+                            color = colorAccentPrimary,
                         ),
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun FakeMealListItem() {
+    Row(
+        modifier = Modifier.padding(16.dp)
+    ) {
+        ProgressIndicator(
+            modifier = Modifier
+                .padding(end = 22.dp)
+                .size(135.dp),
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shimmerEffect(),
+                text = "",
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight(700),
+                    color = colorPrimaryText,
+                ),
+            )
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shimmerEffect(),
+                text = "",
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight(400),
+                    color = colorSecondaryText,
+                ),
+            )
         }
     }
 }
@@ -290,7 +374,7 @@ fun FilterRowList(
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0xFFFFFFFF))
+            .background(colorCommonBackground)
             .padding(vertical = 16.dp)
             .height(32.dp),
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -311,13 +395,15 @@ fun FilterRowList(
 
 @Composable
 fun SelectedFilterItem(
-    title: String, index: Int, onSelectedFilterChanged: (Int) -> Unit
+    title: String,
+    index: Int,
+    onSelectedFilterChanged: (Int) -> Unit
 ) {
     Box(
         modifier = Modifier
             .size(width = 88.dp, height = 32.dp)
             .background(
-                color = Color(0x33FD3A69),
+                color = colorAccentBackground,
                 shape = RoundedCornerShape(size = 6.dp)
             )
             .clickable { onSelectedFilterChanged(index) },
@@ -328,7 +414,7 @@ fun SelectedFilterItem(
             style = TextStyle(
                 fontSize = 13.sp,
                 fontWeight = FontWeight(600),
-                color = Color(0xFFFD3A69)
+                color = colorAccentPrimary
             ),
         )
     }
@@ -336,7 +422,9 @@ fun SelectedFilterItem(
 
 @Composable
 fun UnselectedFilterItem(
-    title: String, index: Int, onSelectedFilterChanged: (Int) -> Unit
+    title: String,
+    index: Int,
+    onSelectedFilterChanged: (Int) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -346,7 +434,7 @@ fun UnselectedFilterItem(
             )
             .size(width = 88.dp, height = 32.dp)
             .background(
-                color = Color(0xFFFFFFFF),
+                color = colorInactiveFilterBackground,
                 shape = RoundedCornerShape(size = 6.dp)
             )
             .clickable { onSelectedFilterChanged(index) },
@@ -357,7 +445,7 @@ fun UnselectedFilterItem(
             style = TextStyle(
                 fontSize = 13.sp,
                 fontWeight = FontWeight(400),
-                color = Color(0xFFC3C4C9)
+                color = colorInactiveFilterText
             ),
         )
     }
@@ -383,8 +471,8 @@ private fun PromoFoodRowList(promoMealItems: ImmutableList<PromoMealImageItem>) 
                     .size(width = 300.dp, height = 112.dp)
                     .shadow(
                         elevation = 10.dp,
-                        spotColor = Color(0x2BBEBEBE),
-                        ambientColor = Color(0x2BBEBEBE)
+                        spotColor = colorShadow,
+                        ambientColor = colorShadow
                     ),
             ) {
                 when (state) {
@@ -434,6 +522,7 @@ fun PreviewFoodListUi() {
             "Десерты",
             "Напитки"
         ).toPersistentList(),
+        mealsLoadingState = LoadingState.SUCCESS,
         meals = buildList {
             repeat(20) { i ->
                 add(
@@ -455,6 +544,7 @@ fun PreviewFoodListUi() {
             PromoMealImageItem("https://drive.google.com/uc?id=1Q9nlg8rQZr2AcpSU_9wYxPD0smOCDSiW"),
         ),
         onSelectedFilterChanged = {},
-        onCurrentCityChanged = {}
+        onCurrentCityChanged = {},
+        onReloadMealsClick = {}
     )
 }
